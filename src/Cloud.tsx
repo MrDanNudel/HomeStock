@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { loadItems } from './storage'
+import { loadSavedItems } from './storage'
 import type { HouseholdItem } from './types'
 export type Person = { id: string; name: string; email: string }
 export class ApiError extends Error {
@@ -60,14 +60,15 @@ export function CloudGate({ children }: { children: (person: Person, logout: () 
 }
 export function HouseholdSetup({ onReady }: { onReady: (invite?: string) => void }) {
   const [join, setJoin] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState('')
+  const [savedItems] = useState(loadSavedItems)
   return <main className="auth-shell"><form className="auth-card" onSubmit={async e => {
     e.preventDefault(); setBusy(true); setError(''); const form = new FormData(e.currentTarget)
-    try { const data = await request('stock', join ? { action: 'join', code: form.get('code') } : { action: 'create', name: form.get('name'), items: form.get('import') ? loadItems() : [] }); onReady(data.inviteCode) }
+    try { const data = await request('stock', join ? { action: 'join', code: form.get('code') } : { action: 'create', name: form.get('name'), items: form.get('import') ? savedItems : [] }); onReady(data.inviteCode) }
     catch(e) { setError((e as Error).message) } finally { setBusy(false) }
   }}><h1>{join ? 'מצטרפים לבית' : 'הבית המשותף שלנו'}</h1>
     {join ? <label className="form-field"><span>קוד ההזמנה שקיבלת</span><input name="code" required dir="ltr" autoComplete="off" /></label> : <>
       <label className="form-field"><span>שם הבית</span><input name="name" defaultValue="הבית שלנו" required maxLength={80} /></label>
-      <label><input type="checkbox" name="import" /> להעביר את רשימת המוצרים מהמכשיר הזה לבית החדש</label>
+      {savedItems.length > 0 && <label><input type="checkbox" name="import" /> נמצאה רשימה ישנה בדפדפן הזה ({savedItems.length} מוצרים). להעתיק אותה לבית החדש</label>}
     </>}
     <button className="primary-button" disabled={busy}>{busy ? 'רגע…' : join ? 'הצטרפות לבית' : 'יצירת בית'}</button>
     <button type="button" className="secondary-button" disabled={busy} onClick={() => { setJoin(!join); setError('') }}>{join ? 'יצירת בית חדש' : 'יש לי קוד הזמנה'}</button>
