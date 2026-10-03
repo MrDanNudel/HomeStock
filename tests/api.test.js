@@ -61,6 +61,7 @@ test('non-JSON upstream error and expired requests show a useful message',async(
 test('household equipment is supported and urgency applies only to low or missing products',()=>{
  const item={id:'battery',categoryId:'household',name:'סוללות',status:'missing',urgent:true};
  assert.equal(validateItem({...item,categoryId:'snacks',name:'שוקולד'}).categoryId,'snacks');
+ assert.equal(validateItem({...item,categoryId:'dishwasher',name:'טבליות למדיח'}).categoryId,'dishwasher');
  assert.equal(validateItem(item).urgent,true);
  assert.equal(validateItem({...item,status:'low'}).urgent,true);
  assert.equal(validateItem({...item,status:'available'}).urgent,false);

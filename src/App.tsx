@@ -15,6 +15,7 @@ import {
   SprayCan,
   Shirt,
   Trash2,
+  Utensils,
   X,
 } from 'lucide-react'
 import { categories } from './data'
@@ -25,6 +26,7 @@ const unitOptions = ['יחידות', 'בקבוקים', 'חבילות', 'ק״ג',
 
 const iconForCategory = (category: Category) => {
   const props = { size: 20, strokeWidth: 1.9 }
+  if (category.icon === 'utensils') return <Utensils {...props} />
   if (category.icon === 'cup-soda') return <CupSoda {...props} />
   if (category.icon === 'package') return <Package {...props} />
   if (category.icon === 'sparkles') return <Sparkles {...props} />
@@ -151,7 +153,7 @@ function CategoryCard({ category, items, onEdit, onAdd }: { category: Category; 
   const alerts = items.filter((item) => item.status !== 'available').length
 
   return (
-    <article className="category-card">
+    <article className="category-card" data-category={category.id}>
       <div className="card-heading">
         <div className="category-title">
           <span className="category-icon">{iconForCategory(category)}</span>

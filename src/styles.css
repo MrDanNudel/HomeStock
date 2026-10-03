@@ -177,3 +177,13 @@ button:focus-visible { outline: 3px solid #b8a9e0; outline-offset: 3px; }
 .shopping-name { flex-wrap: wrap; }
 
 .item-main { flex-wrap: wrap; }
+
+@media (min-width: 901px) {
+  .category-card[data-category="groceries"] { grid-area: 1 / 1; }
+  .category-card[data-category="snacks"] { grid-area: 2 / 1; }
+  .category-card[data-category="hygiene"] { grid-area: 1 / 2; }
+  .category-card[data-category="laundry"] { grid-area: 2 / 2; }
+  .category-card[data-category="cleaning"] { grid-area: 3 / 1; }
+  .category-card[data-category="dishwasher"] { grid-area: 3 / 2; }
+  .category-card[data-category="household"] { grid-area: 4 / 2; }
+}

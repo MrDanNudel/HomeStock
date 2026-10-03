@@ -2,11 +2,12 @@ import type { Category, HouseholdItem } from './types'
 
 export const categories: Category[] = [
   { id: 'groceries', name: 'מצרכים', icon: 'shopping-basket', exampleName: 'חלב', exampleNote: 'חלב 3%' },
+  { id: 'snacks', name: 'שוקולד, חטיפים ושתייה', icon: 'cup-soda', exampleName: 'שוקולד', exampleNote: 'שוקולד מריר 70%' },
   { id: 'hygiene', name: 'מוצרי טיפוח והיגיינה', icon: 'sparkles', exampleName: 'שמפו', exampleNote: 'לעור רגיש' },
   { id: 'laundry', name: 'מוצרי כביסה', icon: 'shirt', exampleName: 'מרכך כביסה', exampleNote: 'לכביסה צבעונית' },
   { id: 'cleaning', name: 'מוצרי ניקוי', icon: 'spray-can', exampleName: 'נוזל רצפות', exampleNote: 'בריח לימון' },
+  { id: 'dishwasher', name: 'מוצרי מדיח כלים', icon: 'utensils', exampleName: 'טבליות למדיח', exampleNote: 'טבליות הכוללות נוזל הברקה' },
   { id: 'household', name: 'ציוד כללי לבית', icon: 'package', exampleName: 'סוללות', exampleNote: 'סוללות AA' },
-  { id: 'snacks', name: 'שוקולד, חטיפים ושתייה', icon: 'cup-soda', exampleName: 'שוקולד', exampleNote: 'שוקולד מריר 70%' },
 ]
 
 const now = new Date().toISOString()
