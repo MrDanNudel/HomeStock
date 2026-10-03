@@ -1,7 +1,7 @@
 export function validateItem(item) {
   const bad = () => { throw Object.assign(new Error('פרטי המוצר אינם תקינים'), { status: 400 }); };
   if (!item || typeof item.id !== 'string' || !item.id || item.id.length > 100) bad();
-  if (!['groceries','hygiene','laundry','cleaning','household','snacks','dishwasher'].includes(item.categoryId)) bad();
+  if (!['groceries','hygiene','laundry','cleaning','household','snacks','dishwasher','meat-fish','produce'].includes(item.categoryId)) bad();
   if (typeof item.name !== 'string' || !item.name.trim() || item.name.length > 120) bad();
   if (!['available','low','missing'].includes(item.status)) bad();
   if (item.urgent !== undefined && typeof item.urgent !== 'boolean') bad();

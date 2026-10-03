@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   Check,
+  Fish,
+  Carrot,
   CircleAlert,
   CupSoda,
   House,
@@ -26,6 +28,8 @@ const unitOptions = ['יחידות', 'בקבוקים', 'חבילות', 'ק״ג',
 
 const iconForCategory = (category: Category) => {
   const props = { size: 20, strokeWidth: 1.9 }
+  if (category.icon === 'fish') return <Fish {...props} />
+  if (category.icon === 'carrot') return <Carrot {...props} />
   if (category.icon === 'utensils') return <Utensils {...props} />
   if (category.icon === 'cup-soda') return <CupSoda {...props} />
   if (category.icon === 'package') return <Package {...props} />
@@ -216,20 +220,21 @@ function ShoppingView({ items, onEdit, onPurchased }: { items: HouseholdItem[]; 
 }
 
 function ItemDialog({ item, categoryId, onClose, onSave, onDelete }: { item: HouseholdItem | null; categoryId: string; onClose: () => void; onSave: (item: HouseholdItem) => void; onDelete?: () => void }) {
+  const [selectedCategory, setSelectedCategory] = useState(categoryId)
   const [name, setName] = useState(item?.name ?? '')
   const [status, setStatus] = useState<ItemStatus>(item?.status ?? 'available')
   const [quantity, setQuantity] = useState(item?.quantity?.toString() ?? '')
   const [unit, setUnit] = useState(item?.unit ?? 'יחידות')
   const [urgent, setUrgent] = useState(item?.status !== 'available' && item?.urgent === true)
   const [note, setNote] = useState(item?.note ?? '')
-  const category = categories.find((entry) => entry.id === categoryId)
+  const category = categories.find((entry) => entry.id === selectedCategory)
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault()
     if (!name.trim()) return
     onSave({
       id: item?.id ?? crypto.randomUUID(),
-      categoryId,
+      categoryId: selectedCategory,
       name: name.trim(),
       status,
       urgent: status !== 'available' && urgent,
@@ -245,6 +250,7 @@ function ItemDialog({ item, categoryId, onClose, onSave, onDelete }: { item: Hou
   return <div className="dialog-backdrop" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
     <form className="dialog" onSubmit={submit}>
       <div className="dialog-heading"><div><span className="eyebrow">{category?.name}</span><h2>{item ? `עריכת ${item.name}` : 'הוספת מוצר חדש'}</h2></div><button type="button" className="icon-button" onClick={onClose}><X size={20} /></button></div>
+      <label className="form-field"><span>קטגוריה</span><select value={selectedCategory} onChange={event => setSelectedCategory(event.target.value)}>{categories.map(entry => <option key={entry.id} value={entry.id}>{entry.name}</option>)}</select></label>
       <label className="form-field"><span>שם המוצר</span><input autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder={`לדוגמה: ${category?.exampleName ?? 'מוצר לבית'}`} /></label>
       <fieldset className="status-picker"><legend>מה הסטטוס שלו?</legend>{(['available', 'low', 'missing'] as ItemStatus[]).map((value) => <button type="button" key={value} className={`${value} ${status === value ? 'selected' : ''}`} onClick={() => { setStatus(value); if(value === 'available') setUrgent(false) }}><i />{STATUS_META[value].label}</button>)}</fieldset>
       {status !== 'available' && <label className="urgent-option"><input type="checkbox" checked={urgent} onChange={event => setUrgent(event.target.checked)} /><span><strong>דחוף</strong><small>יופיע בראש רשימת הקניות</small></span><CircleAlert size={19} /></label>}
