@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   Check,
-  ChevronDown,
   CircleAlert,
   CupSoda,
   House,
@@ -141,11 +140,11 @@ function StockApp({ person, logout }: { person: Person; logout: () => void }) {
 
 function CategoryCard({ category, items, onEdit, onAdd }: { category: Category; items: HouseholdItem[]; onEdit: (item: HouseholdItem) => void; onAdd: () => void }) {
   const [query, setQuery] = useState('')
-  const [filter, setFilter] = useState<'all' | ItemStatus>('all')
+  const [filter, setFilter] = useState<'all' | 'urgent' | ItemStatus>('all')
 
   const visibleItems = useMemo(() => items
     .filter((item) => item.name.includes(query.trim()))
-    .filter((item) => filter === 'all' || item.status === filter)
+    .filter((item) => filter === 'all' || (filter === 'urgent' ? item.urgent === true && item.status !== 'available' : item.status === filter))
     .sort((a, b) => a.name.localeCompare(b.name, 'he')),
   [items, query, filter])
 
@@ -164,8 +163,8 @@ function CategoryCard({ category, items, onEdit, onAdd }: { category: Category; 
       <div className="card-tools">
         <label className="search-field"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="חיפוש ברשימה" /></label>
         <div className="select-wrap"><select value={filter} onChange={(event) => setFilter(event.target.value as typeof filter)} aria-label="סינון לפי סטטוס">
-          <option value="all">כל הסטטוסים</option><option value="missing">חסר</option><option value="low">עומד להיגמר</option><option value="available">קיים</option>
-        </select><ChevronDown size={15} /></div>
+          <option value="all">כל הסטטוסים</option><option value="missing">חסר</option><option value="low">עומד להיגמר</option><option value="available">קיים</option><option value="urgent">דחוף</option>
+        </select></div>
       </div>
 
       <div className="item-list">
