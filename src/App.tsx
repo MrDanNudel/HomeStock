@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Check,
   ChevronDown,
@@ -50,6 +50,7 @@ function StockApp({ person, logout }: { person: Person; logout: () => void }) {
   const [inviteLoading, setInviteLoading] = useState(false)
   const [shoppingMode, setShoppingMode] = useState(false)
   const [editingItem, setEditingItem] = useState<HouseholdItem | null>(null)
+  const [deletingItem, setDeletingItem] = useState<HouseholdItem | null>(null)
   const [newItemCategory, setNewItemCategory] = useState<string | null>(null)
   const [toast, setToast] = useState('')
 
@@ -69,9 +70,12 @@ function StockApp({ person, logout }: { person: Person; logout: () => void }) {
   const addItem = async (item: HouseholdItem) => {
     if (await mutate({ action: 'add', item })) { setNewItemCategory(null); setToast(`${item.name} נוסף לרשימה`) }
   }
-  const removeItem = async (id: string) => {
-    const item = items.find(item => item.id === id)
-    if (item && window.confirm(`למחוק את ${item.name}?`) && await mutate({ action: 'delete', id, version: editingItem?.version ?? item.version })) { setEditingItem(null); setToast(`${item.name} נמחק`) }
+  const removeItem = async () => {
+    if (!deletingItem) return
+    if (await mutate({ action: 'delete', id: deletingItem.id, version: deletingItem.version })) {
+      if (editingItem?.id === deletingItem.id) setEditingItem(null)
+      setDeletingItem(null); setToast(`${deletingItem.name} נמחק`)
+    }
   }
   const markPurchased = async (item: HouseholdItem) => {
     if(await mutate({ action: 'update', item: { ...item, status: 'available', urgent: false } })) setToast(`${item.name} סומן כקיים`)
@@ -114,7 +118,7 @@ function StockApp({ person, logout }: { person: Person; logout: () => void }) {
       </section>
 
       {shoppingMode ? (
-        <ShoppingView items={items} onEdit={setEditingItem} onPurchased={markPurchased} />
+        <ShoppingView items={items} onEdit={setEditingItem} onPurchased={markPurchased} onDelete={setDeletingItem} />
       ) : (
         <section className="category-grid">
           {categories.map((category) => (
@@ -123,6 +127,7 @@ function StockApp({ person, logout }: { person: Person; logout: () => void }) {
               category={category}
               items={items.filter((item) => item.categoryId === category.id)}
               onEdit={setEditingItem}
+              onDelete={setDeletingItem}
               onAdd={() => setNewItemCategory(category.id)}
             />
           ))}
@@ -135,17 +140,21 @@ function StockApp({ person, logout }: { person: Person; logout: () => void }) {
           categoryId={editingItem?.categoryId ?? newItemCategory!}
           onClose={() => { setEditingItem(null); setNewItemCategory(null) }}
           onSave={editingItem ? updateItem : addItem}
-          onDelete={editingItem ? () => removeItem(editingItem.id) : undefined}
+          saving={busy}
+          error={error}
+          onDelete={editingItem ? () => setDeletingItem(editingItem) : undefined}
         />
       )}
 
+      {deletingItem && <DeleteConfirmation item={deletingItem} busy={busy} error={error} onConfirm={removeItem} onCancel={() => setDeletingItem(null)} />}
+      {busy && !editingItem && !newItemCategory && !deletingItem && <div className="saving-notice" role="status"><span className="loading-spinner" />שומרים את השינוי…</div>}
       </div>
       {toast && <div className="toast"><Check size={18} />{toast}</div>}
     </main>
   )
 }
 
-function CategoryCard({ category, items, onEdit, onAdd }: { category: Category; items: HouseholdItem[]; onEdit: (item: HouseholdItem) => void; onAdd: () => void }) {
+function CategoryCard({ category, items, onEdit, onAdd, onDelete }: { category: Category; items: HouseholdItem[]; onEdit: (item: HouseholdItem) => void; onAdd: () => void; onDelete: (item: HouseholdItem) => void }) {
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<'all' | 'urgent' | ItemStatus>('all')
   const [collapsed, setCollapsed] = useState(true)
@@ -186,7 +195,7 @@ function CategoryCard({ category, items, onEdit, onAdd }: { category: Category; 
       </div>
 
       <div className="item-list">
-        {visibleItems.length ? visibleItems.map((item) => <ItemRow key={item.id} item={item} onEdit={() => onEdit(item)} />) : (
+        {visibleItems.length ? visibleItems.map((item) => <ItemRow key={item.id} item={item} onEdit={() => onEdit(item)} onDelete={() => onDelete(item)} />) : (
           <div className="empty-state"><Search size={22} /><span>לא נמצאו מוצרים</span></div>
         )}
       </div>
@@ -195,17 +204,17 @@ function CategoryCard({ category, items, onEdit, onAdd }: { category: Category; 
   )
 }
 
-function ItemRow({ item, onEdit }: { item: HouseholdItem; onEdit: () => void }) {
+function ItemRow({ item, onEdit, onDelete }: { item: HouseholdItem; onEdit: () => void; onDelete: () => void }) {
   return (
-    <button className="item-row" onClick={onEdit}>
+    <SwipeRow onDelete={onDelete}><button className="item-row" onClick={onEdit}>
       <span className="item-main"><strong>{item.name}</strong>{item.urgent && item.status !== 'available' && <span className="urgent-badge"><CircleAlert size={13} />דחוף</span>}{item.quantity !== undefined && <small>{item.quantity} {item.unit ?? ''}</small>}</span>
       <span className={`status-badge ${item.status}`}><i />{STATUS_META[item.status].label}</span>
       <Pencil className="row-edit" size={15} />
-    </button>
+    </button></SwipeRow>
   )
 }
 
-function ShoppingView({ items, onEdit, onPurchased }: { items: HouseholdItem[]; onEdit: (item: HouseholdItem) => void; onPurchased: (item: HouseholdItem) => void }) {
+function ShoppingView({ items, onEdit, onPurchased, onDelete }: { items: HouseholdItem[]; onEdit: (item: HouseholdItem) => void; onPurchased: (item: HouseholdItem) => void; onDelete: (item: HouseholdItem) => void }) {
   const shoppingItems = items.filter((item) => item.status !== 'available').sort((a, b) => a.name.localeCompare(b.name, 'he'))
   return (
     <section className="shopping-panel">
@@ -221,18 +230,18 @@ function ShoppingView({ items, onEdit, onPurchased }: { items: HouseholdItem[]; 
         const categoryItems = group.items.filter((item) => item.categoryId === category.id)
         if (!categoryItems.length) return null
         return <div className="shopping-group" key={category.id}><h3>{iconForCategory(category)}{category.name}</h3>{categoryItems.map((item) => (
-          <div className="shopping-row" key={item.id}>
+          <SwipeRow key={item.id} onDelete={() => onDelete(item)}><div className="shopping-row">
             <button className="purchase-check" onClick={() => onPurchased(item)} aria-label={`סימון ${item.name} כנקנה`}><Check size={17} /></button>
             <button className="shopping-name" onClick={() => onEdit(item)}><strong>{item.name}</strong>{item.urgent && item.status !== 'available' && <span className="urgent-badge"><CircleAlert size={13} />דחוף</span>}{item.quantity !== undefined && <small>{item.quantity} {item.unit ?? ''}</small>}</button>
             <span className={`status-badge ${item.status}`}><i />{STATUS_META[item.status].label}</span>
-          </div>
+          </div></SwipeRow>
         ))}</div>
       })}</section>) : <div className="shopping-empty"><PackageCheck size={46} /><h3>הכול נמצא בבית</h3><p>אין כרגע מוצרים שחסרים או עומדים להיגמר.</p></div>}
     </section>
   )
 }
 
-function ItemDialog({ item, categoryId, onClose, onSave, onDelete }: { item: HouseholdItem | null; categoryId: string; onClose: () => void; onSave: (item: HouseholdItem) => void; onDelete?: () => void }) {
+function ItemDialog({ item, categoryId, onClose, onSave, onDelete, saving, error }: { item: HouseholdItem | null; categoryId: string; onClose: () => void; onSave: (item: HouseholdItem) => void; onDelete?: () => void; saving: boolean; error: string }) {
   const [selectedCategory, setSelectedCategory] = useState(categoryId)
   const [name, setName] = useState(item?.name ?? '')
   const [status, setStatus] = useState<ItemStatus>(item?.status ?? 'available')
@@ -244,7 +253,7 @@ function ItemDialog({ item, categoryId, onClose, onSave, onDelete }: { item: Hou
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault()
-    if (!name.trim()) return
+    if (saving || !name.trim()) return
     onSave({
       id: item?.id ?? crypto.randomUUID(),
       categoryId: selectedCategory,
@@ -260,8 +269,9 @@ function ItemDialog({ item, categoryId, onClose, onSave, onDelete }: { item: Hou
     })
   }
 
-  return <div className="dialog-backdrop" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+  return <div className="dialog-backdrop" onMouseDown={(event) => !saving && event.target === event.currentTarget && onClose()}>
     <form className="dialog" onSubmit={submit}>
+      <fieldset className="dialog-fields" disabled={saving}>
       <div className="dialog-heading"><div><span className="eyebrow">{category?.name}</span><h2>{item ? `עריכת ${item.name}` : 'הוספת מוצר חדש'}</h2></div><button type="button" className="icon-button" onClick={onClose}><X size={20} /></button></div>
       <label className="form-field"><span>קטגוריה</span><select value={selectedCategory} onChange={event => setSelectedCategory(event.target.value)}>{categories.map(entry => <option key={entry.id} value={entry.id}>{entry.name}</option>)}</select></label>
       <label className="form-field"><span>שם המוצר</span><input autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder={`לדוגמה: ${category?.exampleName ?? 'מוצר לבית'}`} /></label>
@@ -270,8 +280,59 @@ function ItemDialog({ item, categoryId, onClose, onSave, onDelete }: { item: Hou
       <div className="quantity-section"><div className="section-label"><span>כמות נוכחית</span><small>לא חובה</small></div><div className="quantity-controls"><button type="button" onClick={() => setQuantity(String(Math.max(0, Number(quantity || 0) - 1)))}><Minus size={18} /></button><input type="number" min="0" step="0.5" value={quantity} onChange={(event) => setQuantity(event.target.value)} placeholder="—" /><button type="button" onClick={() => setQuantity(String(Number(quantity || 0) + 1))}><Plus size={18} /></button><select value={unit} onChange={(event) => setUnit(event.target.value)}>{unitOptions.map((value) => <option key={value}>{value}</option>)}</select></div></div>
       <label className="form-field"><span>הערה <small>לא חובה</small></span><input value={note} onChange={(event) => setNote(event.target.value)} placeholder={`לדוגמה: ${category?.exampleNote ?? 'מותג מועדף'}`} /></label>
       {quantity === '0' && status !== 'missing' && <button type="button" className="zero-hint" onClick={() => setStatus('missing')}><CircleAlert size={17} />הכמות היא 0 — לשנות את הסטטוס לחסר?</button>}
-      <div className="dialog-footer">{onDelete && <button type="button" className="delete-button" onClick={onDelete}><Trash2 size={17} />מחיקה</button>}<span /><button type="button" className="secondary-button" onClick={onClose}>ביטול</button><button className="primary-button" disabled={!name.trim()}>{item ? 'שמירת שינויים' : 'הוספת מוצר'}</button></div>
+      {saving && <p className="save-feedback" role="status">{item ? 'שומרים את השינויים בענן…' : 'מוסיפים את המוצר לבית המשותף…'}</p>}
+      {!saving && error && <p className="cloud-error" role="alert">{error}</p>}
+      <div className="dialog-footer">{onDelete && <button type="button" className="delete-button" onClick={onDelete}><Trash2 size={17} />מחיקה</button>}<span /><button type="button" className="secondary-button" onClick={onClose}>ביטול</button><button className="primary-button save-product-button" disabled={saving || !name.trim()}>{saving ? <><span className="loading-spinner" />{item ? 'שומרים שינויים…' : 'מוסיפים מוצר…'}</> : item ? 'שמירת שינויים' : 'הוספת מוצר'}</button></div>
+      </fieldset>
     </form>
+  </div>
+}
+
+
+function SwipeRow({ children, onDelete }: { children: React.ReactNode; onDelete: () => void }) {
+  const start = useRef<{ x: number; y: number; id: number } | null>(null)
+  const suppressClick = useRef(false)
+  const [offset, setOffset] = useState(0)
+  return <div className={`swipe-row ${offset > 0 ? 'swiping' : ''}`} style={{ transform: offset ? `translateX(${offset}px)` : undefined }}
+    onPointerDown={event => {
+      suppressClick.current = false
+      if(event.pointerType !== 'touch' || !window.matchMedia('(max-width: 600px)').matches) return
+      start.current = { x: event.clientX, y: event.clientY, id: event.pointerId }
+    }}
+    onPointerMove={event => {
+      const origin = start.current
+      if(!origin || origin.id !== event.pointerId) return
+      const dx = event.clientX - origin.x, dy = Math.abs(event.clientY - origin.y)
+      if(dx > 12 && dx > dy * 2) {
+        suppressClick.current = true
+        event.currentTarget.setPointerCapture(event.pointerId)
+        setOffset(Math.min(dx, 100))
+      } else if(dy > 20 && !suppressClick.current) { start.current = null }
+      else if(suppressClick.current) setOffset(Math.max(0, Math.min(dx, 100)))
+    }}
+    onPointerUp={event => {
+      const origin = start.current
+      start.current = null; setOffset(0)
+      if(origin && origin.id === event.pointerId) {
+        const dx = event.clientX - origin.x, dy = Math.abs(event.clientY - origin.y)
+        if(dx >= 80 && dy < 40 && dx > dy * 2) { suppressClick.current = true; onDelete() }
+      }
+    }}
+    onPointerCancel={() => { start.current = null; setOffset(0) }}
+    onClickCapture={event => { if(suppressClick.current && event.detail !== 0) { event.preventDefault(); event.stopPropagation() } }}
+  >{children}</div>
+}
+function DeleteConfirmation({ item, busy, error, onConfirm, onCancel }: { item: HouseholdItem; busy: boolean; error: string; onConfirm: () => void; onCancel: () => void }) {
+  const cancelButton = useRef<HTMLButtonElement>(null)
+  useEffect(() => { cancelButton.current?.focus() }, [])
+  return <div className="dialog-backdrop delete-backdrop" onMouseDown={event => { if(!busy && event.target === event.currentTarget) onCancel() }} onKeyDown={event => { if(event.key === 'Escape' && !busy) { event.stopPropagation(); onCancel() } else if(event.key === 'Tab') { const controls = event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'); if(!controls.length) { event.preventDefault(); return }; const first = controls[0], last = controls[controls.length - 1]; if(event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() } else if(!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() } } }}>
+    <section className="dialog delete-confirmation" role="alertdialog" aria-modal="true" aria-labelledby="delete-title" aria-describedby="delete-description">
+      <span className="delete-symbol"><Trash2 size={26} /></span>
+      <h2 id="delete-title">מחיקת פריט</h2>
+      <p id="delete-description">האם אתה בטוח שברצונך למחוק את ״{item.name}״?</p>
+      {!busy && error && <p className="cloud-error" role="alert">{error}</p>}
+      <div className="delete-actions"><button className="delete-button" disabled={busy} onClick={onConfirm}>{busy ? <><span className="loading-spinner" />מוחקים…</> : 'כן, מחק פריט'}</button><button ref={cancelButton} className="secondary-button" disabled={busy} onClick={onCancel}>ביטול</button></div>
+    </section>
   </div>
 }
 
