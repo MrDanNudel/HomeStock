@@ -2,10 +2,16 @@ import { useEffect, useRef, useState } from 'react'
 import { loadItems } from './storage'
 import type { HouseholdItem } from './types'
 export type Person = { id: string; name: string; email: string }
+export class ApiError extends Error {
+  constructor(message: string, public status: number, public code?: string) { super(message) }
+}
 export async function request(path: string, body?: unknown) {
-  const response = await fetch(`/api/${path}`, { method: body ? 'POST' : 'GET', credentials: 'same-origin', headers: body ? { 'Content-Type': 'application/json' } : undefined, body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(20000) })
-  const data = await response.json()
-  if (!response.ok) throw new Error(data.error || 'הפעולה לא הושלמה')
+  let response: Response
+  try { response = await fetch(`/api/${path}`, { method: body ? 'POST' : 'GET', credentials: 'same-origin', headers: body ? { 'Content-Type': 'application/json' } : undefined, body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(20000) }) }
+  catch(e) { throw new Error((e as Error).name === 'TimeoutError' ? 'השרת לא ענה בזמן. נסה שוב בעוד רגע.' : 'לא ניתן להגיע לשרת. בדוק את החיבור לאינטרנט ונסה שוב.') }
+  const data = await response.json().catch(() => null)
+  if (!response.ok) throw new ApiError(data?.error || 'השרת אינו זמין כרגע. נסה שוב בעוד רגע.', response.status, data?.code)
+  if (!data) throw new Error('השרת החזיר תשובה לא צפויה. רענן את הדף ונסה שוב.')
   return data
 }
 export function CloudGate({ children }: { children: (person: Person, logout: () => void) => React.ReactNode }) {
@@ -13,29 +19,42 @@ export function CloudGate({ children }: { children: (person: Person, logout: () 
   const [loading, setLoading] = useState(true)
   const [mode, setMode] = useState<'signin' | 'signup'>('signin')
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [busy, setBusy] = useState(false)
   const [configured, setConfigured] = useState(true)
   useEffect(() => { let active = true; request('auth?action=config').then(async config => {
     if (!active) return
     setConfigured(config.configured)
-    if (config.configured) { try { const data = await request('auth?action=session'); if(active) setPerson(data.user) } catch { /* signed out */ } }
+    if (config.configured) { try { const data = await request('auth?action=session'); if(active) setPerson(data.user) } catch(e) { if(active && !(e instanceof ApiError && e.status === 401)) setError((e as Error).message) } }
   }).catch(() => { if(active) setError('לא ניתן להתחבר לשרת. נסה לרענן את הדף.') }).finally(() => { if(active) setLoading(false) }); return () => { active = false } }, [])
   const logout = async () => { try { await request('auth?action=signout', {}); setPerson(null) } catch(e) { setError((e as Error).message) } }
   if (loading) return <main className="auth-shell"><p>מתחברים לבית…</p></main>
   if (person) return <>{error && <div className="cloud-error" role="alert">{error}</div>}{children(person, logout)}</>
   return <main className="auth-shell"><form className="auth-card" onSubmit={async e => {
-    e.preventDefault(); setBusy(true); setError('')
+    e.preventDefault(); if(busy) return; setBusy(true); setError(''); setNotice('')
     const form = new FormData(e.currentTarget)
-    try { await request(`auth?action=${mode}`, { email: form.get('email'), password: form.get('password'), name: form.get('name') }); const session = await request('auth?action=session'); setPerson(session.user) }
+    try {
+      const result = await request(`auth?action=${mode}`, { email: form.get('email'), password: form.get('password'), name: form.get('name') })
+      try { const session = await request('auth?action=session'); setPerson(session.user) }
+      catch(e) {
+        if(e instanceof ApiError && e.status === 401) {
+          if(mode === 'signup' && result.needsVerification) { setMode('signin'); setNotice('בקשת ההרשמה התקבלה. בדוק אם נשלחה אליך הודעת אימות (גם בספאם), אשר את האימייל ואז התחבר. אם כבר יש לך חשבון, התחבר עם הסיסמה הקיימת.') }
+          else setError('פרטי הכניסה אושרו, אבל החיבור לחשבון לא נשמר בדפדפן. רענן ונסה שוב; אם הבעיה נמשכת, שלח לנו את ההודעה הזאת.')
+        } else throw e
+      }
+    }
     catch(e) { setError((e as Error).message) } finally { setBusy(false) }
   }}><h1>מה יש בבית?</h1><p>המלאי שלכם, יחד ובכל מכשיר</p>
     {!configured ? <p role="alert">החיבור לענן עדיין לא הושלם. יש להגדיר ב־Vercel את NEON_AUTH_BASE_URL ואת DATABASE_URL.</p> : <>
     <h2>{mode === 'signin' ? 'כניסה לבית' : 'יצירת חשבון'}</h2>
     {mode === 'signup' && <label className="form-field"><span>השם שלך</span><input name="name" required maxLength={80} autoComplete="name" /></label>}
-    <label className="form-field"><span>אימייל</span><input name="email" type="email" required dir="ltr" autoComplete="email" /></label>
-    <label className="form-field"><span>סיסמה</span><input name="password" type="password" required minLength={8} maxLength={128} dir="ltr" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} /></label>
+    <label className="form-field"><span>אימייל</span><input name="email" type="email" required dir="ltr" autoComplete="email" autoCapitalize="none" spellCheck={false} /></label>
+    <label className="form-field"><span>סיסמה{mode === 'signup' && <small> — לפחות 8 תווים</small>}</span><input name="password" type={showPassword ? 'text' : 'password'} required minLength={mode === 'signup' ? 8 : 1} maxLength={128} dir="ltr" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} /></label>
+    <label className="password-visibility"><input type="checkbox" checked={showPassword} onChange={e => setShowPassword(e.target.checked)} /> הצגת הסיסמה</label>
     <button className="primary-button" disabled={busy}>{busy ? 'רגע…' : mode === 'signin' ? 'כניסה' : 'הרשמה'}</button>
-    <button type="button" className="secondary-button" disabled={busy} onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError('') }}>{mode === 'signin' ? 'אין לי חשבון — הרשמה' : 'יש לי חשבון — כניסה'}</button></>}
+    <button type="button" className="secondary-button" disabled={busy} onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError(''); setNotice('') }}>{mode === 'signin' ? 'אין לי חשבון — הרשמה' : 'יש לי חשבון — כניסה'}</button></>}
+    {notice && <p role="status" className="auth-notice">{notice}</p>}
     {error && <p role="alert" className="cloud-error">{error}</p>}
   </form></main>
 }

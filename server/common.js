@@ -44,6 +44,7 @@ export async function db() {
   return sql;
 }
 export function failure(res, e) {
+  if (e.name === 'TimeoutError' || e.name === 'AbortError') return json(res, 504, { code: 'AUTH_TIMEOUT', error: 'השרת לא ענה בזמן. בדוק את החיבור ונסה שוב.' });
   if (!e.status) console.error('HomeStock request failed:', e.code || e.name);
   return json(res, e.status || 500, { error: e.status ? e.message : 'לא ניתן להשלים את הפעולה כרגע. נסה שוב.' });
 }
