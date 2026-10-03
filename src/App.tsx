@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   Check,
+  ChevronDown,
   Fish,
   Carrot,
   CircleAlert,
@@ -147,6 +148,7 @@ function StockApp({ person, logout }: { person: Person; logout: () => void }) {
 function CategoryCard({ category, items, onEdit, onAdd }: { category: Category; items: HouseholdItem[]; onEdit: (item: HouseholdItem) => void; onAdd: () => void }) {
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<'all' | 'urgent' | ItemStatus>('all')
+  const [collapsed, setCollapsed] = useState(false)
 
   const visibleItems = useMemo(() => items
     .filter((item) => item.name.includes(query.trim()))
@@ -157,15 +159,17 @@ function CategoryCard({ category, items, onEdit, onAdd }: { category: Category; 
   const alerts = items.filter((item) => item.status !== 'available').length
 
   return (
-    <article className="category-card" data-category={category.id}>
+    <article className={`category-card ${collapsed ? 'mobile-collapsed' : ''}`} data-category={category.id}>
       <div className="card-heading">
         <div className="category-title">
           <span className="category-icon">{iconForCategory(category)}</span>
           <div><h2>{category.name}</h2><p>{items.length} מוצרים{alerts ? ` · ${alerts} דורשים תשומת לב` : ''}</p></div>
         </div>
-        <button className="add-button" onClick={onAdd} aria-label={`הוספת מוצר אל ${category.name}`}><Plus size={20} /></button>
+        <button type="button" className="card-toggle" aria-expanded={!collapsed} aria-controls={`category-content-${category.id}`} aria-label={`${collapsed ? 'פתיחת' : 'סגירת'} ${category.name}`} onClick={() => setCollapsed(value => !value)}><ChevronDown size={18} /></button>
+        <button className="add-button" onClick={() => { setCollapsed(false); onAdd() }} aria-label={`הוספת מוצר אל ${category.name}`}><Plus size={20} /></button>
       </div>
 
+      <div className="card-content" id={`category-content-${category.id}`}>
       <div className="card-tools">
         <label className="search-field"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="חיפוש ברשימה" /></label>
         <div className="select-wrap"><select value={filter} onChange={(event) => setFilter(event.target.value as typeof filter)} aria-label="סינון לפי סטטוס">
@@ -177,6 +181,7 @@ function CategoryCard({ category, items, onEdit, onAdd }: { category: Category; 
         {visibleItems.length ? visibleItems.map((item) => <ItemRow key={item.id} item={item} onEdit={() => onEdit(item)} />) : (
           <div className="empty-state"><Search size={22} /><span>לא נמצאו מוצרים</span></div>
         )}
+      </div>
       </div>
     </article>
   )

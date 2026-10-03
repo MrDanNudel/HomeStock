@@ -193,3 +193,15 @@ button:focus-visible { outline: 3px solid #b8a9e0; outline-offset: 3px; }
 .form-field select { width: 100%; min-height: 48px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; background: #fcfbfd; color: inherit; font: inherit; }
 .form-field select:focus-visible { outline: 3px solid #b8a9e0; outline-offset: 2px; }
 @media(max-width:600px) { .form-field select { font-size: 16px; } }
+
+.card-toggle { display: none; }
+@media(max-width:600px) {
+  .card-heading { position: relative; }
+  .card-toggle { display: flex; position: absolute; inset-block: 0; inset-inline-start: 0; inset-inline-end: 68px; align-items: center; justify-content: flex-end; padding-inline: 14px; border: 0; border-radius: 0; background: transparent; color: var(--muted); }
+  .card-toggle:focus-visible { outline-offset: -4px; border-radius: 14px; }
+  .card-toggle svg { transition: transform .18s ease; }
+  .category-title { padding-inline-end: 30px; }
+  .mobile-collapsed .card-toggle svg { transform: rotate(90deg); }
+  .mobile-collapsed .card-content { display: none; }
+}
+@media(prefers-reduced-motion:reduce) { .card-toggle svg { transition: none; } }
