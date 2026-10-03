@@ -2,6 +2,7 @@ export type ItemStatus = 'available' | 'low' | 'missing'
 
 export type HouseholdItem = {
   id: string
+  version?: number
   categoryId: string
   name: string
   status: ItemStatus

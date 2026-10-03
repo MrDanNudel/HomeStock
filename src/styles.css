@@ -124,3 +124,14 @@ button { cursor: pointer; }
   .shopping-panel { width: 100%; min-width: 0; border-radius: 15px; }.shopping-group { padding-inline: 10px; }.shopping-row { min-height: 66px; grid-template-columns: 44px minmax(0, 1fr); }.purchase-check { width: 40px; height: 40px; }.shopping-name { min-width: 0; }.shopping-name strong { overflow-wrap: anywhere; }.shopping-row .status-badge { grid-column: 2; justify-self: start; margin-top: -6px; }
   .toast { bottom: calc(18px + env(safe-area-inset-bottom)); width: max-content; max-width: calc(100vw - 24px); }
 }
+.auth-shell { min-height:100dvh; display:grid; place-items:center; padding:24px; }
+.auth-card { width:min(100%,420px); background:white; border:1px solid #e7e5e4; border-radius:22px; padding:28px; display:grid; gap:18px; box-shadow:0 8px 40px #00000008; }
+.auth-card h1,.auth-card h2,.auth-card p { margin:0; }
+.auth-card p { color:#777; line-height:1.7; }
+.cloud-error { padding:14px; background:#fff0ee; color:#9d3025; border-radius:12px; margin:12px 0; line-height:1.6; }
+.invite-panel { background:#fff; border:1px solid #ddd; border-radius:16px; padding:20px; margin:16px 0; }
+.invite-panel p { line-height:1.6; }
+.invite-panel code { display:block; overflow-wrap:anywhere; user-select:all; padding:12px; background:#f7f6f4; margin:12px 0; }
+.stock-content.saving { pointer-events:none; opacity:.65; }
+.setup-logout { position:fixed; bottom:20px; left:20px; }
+@media(max-width:600px) { .header-actions { flex-wrap:wrap; } .auth-card { padding:22px; } }

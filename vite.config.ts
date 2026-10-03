@@ -2,6 +2,6 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
-  base: '/HomeStock/',
+  base: process.env.GITHUB_PAGES === 'true' ? '/HomeStock/' : '/',
   plugins: [react()],
 })

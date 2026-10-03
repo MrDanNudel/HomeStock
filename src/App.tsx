@@ -17,8 +17,7 @@ import {
   X,
 } from 'lucide-react'
 import { categories } from './data'
-import { loadItems, saveItems } from './storage'
-import { isCloudConfigured } from './supabase'
+import { CloudGate, HouseholdSetup, request, useStock, type Person } from './Cloud'
 import { STATUS_META, type Category, type HouseholdItem, type ItemStatus, type SortMode } from './types'
 
 const statusOrder: Record<ItemStatus, number> = { missing: 0, low: 1, available: 2 }
@@ -33,13 +32,16 @@ const iconForCategory = (category: Category) => {
 }
 
 function App() {
-  const [items, setItems] = useState<HouseholdItem[]>(loadItems)
+  return <CloudGate>{(person, logout) => <StockApp key={person.id} person={person} logout={logout} />}</CloudGate>
+}
+function StockApp({ person, logout }: { person: Person; logout: () => void }) {
+  const { items, household, error, busy, syncing, refresh, mutate } = useStock()
+  const [invite, setInvite] = useState('')
   const [shoppingMode, setShoppingMode] = useState(false)
   const [editingItem, setEditingItem] = useState<HouseholdItem | null>(null)
   const [newItemCategory, setNewItemCategory] = useState<string | null>(null)
   const [toast, setToast] = useState('')
 
-  useEffect(() => saveItems(items), [items])
 
   useEffect(() => {
     if (!toast) return
@@ -50,29 +52,21 @@ function App() {
   const missingCount = items.filter((item) => item.status === 'missing').length
   const lowCount = items.filter((item) => item.status === 'low').length
 
-  const updateItem = (next: HouseholdItem) => {
-    setItems((current) => current.map((item) => (item.id === next.id ? next : item)))
-    setEditingItem(null)
-    setToast('השינויים נשמרו')
+  const updateItem = async (next: HouseholdItem) => {
+    if (await mutate({ action: 'update', item: next })) { setEditingItem(null); setToast('השינויים נשמרו בענן') }
   }
-
-  const addItem = (item: HouseholdItem) => {
-    setItems((current) => [...current, item])
-    setNewItemCategory(null)
-    setToast(`${item.name} נוסף לרשימה`)
+  const addItem = async (item: HouseholdItem) => {
+    if (await mutate({ action: 'add', item })) { setNewItemCategory(null); setToast(`${item.name} נוסף לרשימה`) }
   }
-
-  const removeItem = (id: string) => {
-    const name = items.find((item) => item.id === id)?.name
-    setItems((current) => current.filter((item) => item.id !== id))
-    setEditingItem(null)
-    setToast(`${name ?? 'המוצר'} נמחק`)
+  const removeItem = async (id: string) => {
+    const item = items.find(item => item.id === id)
+    if (item && window.confirm(`למחוק את ${item.name}?`) && await mutate({ action: 'delete', id, version: editingItem?.version ?? item.version })) { setEditingItem(null); setToast(`${item.name} נמחק`) }
   }
-
-  const markPurchased = (item: HouseholdItem) => {
-    updateItem({ ...item, status: 'available', updatedAt: new Date().toISOString(), updatedBy: 'דן' })
-    setToast(`${item.name} סומן כקיים`)
+  const markPurchased = async (item: HouseholdItem) => {
+    if(await mutate({ action: 'update', item: { ...item, status: 'available' } })) setToast(`${item.name} סומן כקיים`)
   }
+  if (household === undefined) return <main className="auth-shell"><div className="auth-card"><p>{error || 'טוענים את המלאי…'}</p><button className="secondary-button" onClick={refresh}>ניסיון נוסף</button><button className="secondary-button" onClick={logout}>יציאה</button></div></main>
+  if (household === null) return <><HouseholdSetup onReady={code => { setInvite(code || ''); void refresh() }} /><button className="setup-logout secondary-button" onClick={logout}>יציאה מהחשבון</button></>
 
   return (
     <main className="app-shell">
@@ -81,13 +75,15 @@ function App() {
           <span className="brand-mark"><House size={21} /></span>
           <div>
             <h1>מה יש בבית?</h1>
-            <p>המלאי המשותף שלנו</p>
+            <p>{household.name} · {person.name}</p>
           </div>
         </div>
         <div className="header-actions">
-          <span className={`sync-pill ${isCloudConfigured ? 'online' : ''}`}>
+          <button className="secondary-button" disabled={busy} onClick={async () => { try { const data = await request('stock', { action: 'invite' }); setInvite(data.inviteCode) } catch(e) { setToast((e as Error).message) } }}>הזמנה לבית</button>
+          <button className="secondary-button" onClick={logout}>יציאה</button>
+          <span className={`sync-pill ${!error && !syncing ? 'online' : ''}`}>
             <span className="sync-dot" />
-            {isCloudConfigured ? 'מסונכרן' : 'מצב מקומי'}
+            {error ? 'אין חיבור' : syncing ? 'מסנכרן…' : 'מחובר לענן'}
           </span>
           <button className={`shopping-button ${shoppingMode ? 'active' : ''}`} onClick={() => setShoppingMode((value) => !value)}>
             <ShoppingBasket size={19} />
@@ -97,6 +93,9 @@ function App() {
         </div>
       </header>
 
+      {error && <div className="cloud-error" role="alert">{error}</div>}
+      {invite && <section className="invite-panel"><strong>קוד הזמנה לבית</strong><p>בת הזוג נרשמת באתר ובוחרת ״יש לי קוד הזמנה״. יצירת קוד חדש מבטלת את הקודם.</p><code dir="ltr">{invite}</code><button className="secondary-button" onClick={async () => { try { await navigator.clipboard.writeText(invite); setToast('הקוד הועתק') } catch { setToast('אפשר לסמן ולהעתיק את הקוד') } }}>העתקה</button><button className="secondary-button" onClick={() => setInvite('')}>סגירה</button></section>}
+      <div className={busy ? 'stock-content saving' : 'stock-content'} aria-busy={busy}>
       <section className="summary-strip" aria-label="סיכום מלאי">
         <div><span className="summary-dot missing" /><strong>{missingCount}</strong><small>חסרים</small></div>
         <div><span className="summary-dot low" /><strong>{lowCount}</strong><small>עומדים להיגמר</small></div>
@@ -129,6 +128,7 @@ function App() {
         />
       )}
 
+      </div>
       {toast && <div className="toast"><Check size={18} />{toast}</div>}
     </main>
   )
@@ -228,7 +228,8 @@ function ItemDialog({ item, categoryId, onClose, onSave, onDelete }: { item: Hou
       unit: quantity === '' ? undefined : unit,
       note: note.trim() || undefined,
       updatedAt: new Date().toISOString(),
-      updatedBy: 'דן',
+      updatedBy: item?.updatedBy ?? '',
+      version: item?.version,
     })
   }
 
