@@ -6,6 +6,7 @@ import {
   House,
   Minus,
   PackageCheck,
+  Package,
   Pencil,
   Plus,
   Search,
@@ -25,6 +26,7 @@ const unitOptions = ['יחידות', 'בקבוקים', 'חבילות', 'ק״ג',
 
 const iconForCategory = (category: Category) => {
   const props = { size: 20, strokeWidth: 1.9 }
+  if (category.icon === 'package') return <Package {...props} />
   if (category.icon === 'sparkles') return <Sparkles {...props} />
   if (category.icon === 'shirt') return <Shirt {...props} />
   if (category.icon === 'spray-can') return <SprayCan {...props} />
@@ -63,7 +65,7 @@ function StockApp({ person, logout }: { person: Person; logout: () => void }) {
     if (item && window.confirm(`למחוק את ${item.name}?`) && await mutate({ action: 'delete', id, version: editingItem?.version ?? item.version })) { setEditingItem(null); setToast(`${item.name} נמחק`) }
   }
   const markPurchased = async (item: HouseholdItem) => {
-    if(await mutate({ action: 'update', item: { ...item, status: 'available' } })) setToast(`${item.name} סומן כקיים`)
+    if(await mutate({ action: 'update', item: { ...item, status: 'available', urgent: false } })) setToast(`${item.name} סומן כקיים`)
   }
   if (household === undefined) return <main className="auth-shell"><div className="auth-card"><p>{error || 'טוענים את המלאי…'}</p><button className="secondary-button" onClick={refresh}>ניסיון נוסף</button><button className="secondary-button" onClick={logout}>יציאה</button></div></main>
   if (household === null) return <><HouseholdSetup onReady={code => { setInvite(code || ''); void refresh() }} /><button className="setup-logout secondary-button" onClick={logout}>יציאה מהחשבון</button></>
@@ -142,9 +144,9 @@ function CategoryCard({ category, items, onEdit, onAdd }: { category: Category; 
   const visibleItems = useMemo(() => items
     .filter((item) => item.name.includes(query.trim()))
     .filter((item) => filter === 'all' || item.status === filter)
-    .sort((a, b) => sort === 'alphabetical'
+    .sort((a, b) => Number(Boolean(b.urgent && b.status !== 'available')) - Number(Boolean(a.urgent && a.status !== 'available')) || (sort === 'alphabetical'
       ? a.name.localeCompare(b.name, 'he')
-      : statusOrder[a.status] - statusOrder[b.status] || a.name.localeCompare(b.name, 'he')),
+      : statusOrder[a.status] - statusOrder[b.status] || a.name.localeCompare(b.name, 'he'))),
   [items, query, filter, sort])
 
   const alerts = items.filter((item) => item.status !== 'available').length
@@ -179,7 +181,7 @@ function CategoryCard({ category, items, onEdit, onAdd }: { category: Category; 
 function ItemRow({ item, onEdit }: { item: HouseholdItem; onEdit: () => void }) {
   return (
     <button className="item-row" onClick={onEdit}>
-      <span className="item-main"><strong>{item.name}</strong>{item.quantity !== undefined && <small>{item.quantity} {item.unit ?? ''}</small>}</span>
+      <span className="item-main"><strong>{item.name}</strong>{item.urgent && item.status !== 'available' && <span className="urgent-badge"><CircleAlert size={13} />דחוף</span>}{item.quantity !== undefined && <small>{item.quantity} {item.unit ?? ''}</small>}</span>
       <span className={`status-badge ${item.status}`}><i />{STATUS_META[item.status].label}</span>
       <Pencil className="row-edit" size={15} />
     </button>
@@ -193,17 +195,22 @@ function ShoppingView({ items, onEdit, onPurchased }: { items: HouseholdItem[]; 
       <div className="shopping-heading">
         <div><span className="category-icon warm"><ShoppingBasket size={22} /></span><div><h2>רשימת הקניות</h2><p>{shoppingItems.length} מוצרים חסרים או עומדים להיגמר</p></div></div>
       </div>
-      {shoppingItems.length ? categories.map((category) => {
-        const categoryItems = shoppingItems.filter((item) => item.categoryId === category.id)
+      {shoppingItems.length ? [
+        { urgent: true, items: shoppingItems.filter(item => item.urgent) },
+        { urgent: false, items: shoppingItems.filter(item => !item.urgent) },
+      ].filter(group => group.items.length > 0).map(group => <section key={String(group.urgent)} className={group.urgent ? 'urgent-shopping' : undefined} aria-label={group.urgent ? 'קניות דחופות' : 'יתר הקניות'}>
+        {group.urgent && <h3 className="urgent-heading"><CircleAlert size={19} />דחוף — לקנות קודם</h3>}
+        {categories.map((category) => {
+        const categoryItems = group.items.filter((item) => item.categoryId === category.id)
         if (!categoryItems.length) return null
         return <div className="shopping-group" key={category.id}><h3>{iconForCategory(category)}{category.name}</h3>{categoryItems.map((item) => (
           <div className="shopping-row" key={item.id}>
             <button className="purchase-check" onClick={() => onPurchased(item)} aria-label={`סימון ${item.name} כנקנה`}><Check size={17} /></button>
-            <button className="shopping-name" onClick={() => onEdit(item)}><strong>{item.name}</strong>{item.quantity !== undefined && <small>{item.quantity} {item.unit ?? ''}</small>}</button>
+            <button className="shopping-name" onClick={() => onEdit(item)}><strong>{item.name}</strong>{item.urgent && item.status !== 'available' && <span className="urgent-badge"><CircleAlert size={13} />דחוף</span>}{item.quantity !== undefined && <small>{item.quantity} {item.unit ?? ''}</small>}</button>
             <span className={`status-badge ${item.status}`}><i />{STATUS_META[item.status].label}</span>
           </div>
         ))}</div>
-      }) : <div className="shopping-empty"><PackageCheck size={46} /><h3>הכול נמצא בבית</h3><p>אין כרגע מוצרים שחסרים או עומדים להיגמר.</p></div>}
+      })}</section>) : <div className="shopping-empty"><PackageCheck size={46} /><h3>הכול נמצא בבית</h3><p>אין כרגע מוצרים שחסרים או עומדים להיגמר.</p></div>}
     </section>
   )
 }
@@ -213,6 +220,7 @@ function ItemDialog({ item, categoryId, onClose, onSave, onDelete }: { item: Hou
   const [status, setStatus] = useState<ItemStatus>(item?.status ?? 'available')
   const [quantity, setQuantity] = useState(item?.quantity?.toString() ?? '')
   const [unit, setUnit] = useState(item?.unit ?? 'יחידות')
+  const [urgent, setUrgent] = useState(item?.status !== 'available' && item?.urgent === true)
   const [note, setNote] = useState(item?.note ?? '')
   const category = categories.find((entry) => entry.id === categoryId)
 
@@ -224,6 +232,7 @@ function ItemDialog({ item, categoryId, onClose, onSave, onDelete }: { item: Hou
       categoryId,
       name: name.trim(),
       status,
+      urgent: status !== 'available' && urgent,
       quantity: quantity === '' ? undefined : Math.max(0, Number(quantity)),
       unit: quantity === '' ? undefined : unit,
       note: note.trim() || undefined,
@@ -237,7 +246,8 @@ function ItemDialog({ item, categoryId, onClose, onSave, onDelete }: { item: Hou
     <form className="dialog" onSubmit={submit}>
       <div className="dialog-heading"><div><span className="eyebrow">{category?.name}</span><h2>{item ? `עריכת ${item.name}` : 'הוספת מוצר חדש'}</h2></div><button type="button" className="icon-button" onClick={onClose}><X size={20} /></button></div>
       <label className="form-field"><span>שם המוצר</span><input autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder="לדוגמה: חלב" /></label>
-      <fieldset className="status-picker"><legend>מה הסטטוס שלו?</legend>{(['available', 'low', 'missing'] as ItemStatus[]).map((value) => <button type="button" key={value} className={`${value} ${status === value ? 'selected' : ''}`} onClick={() => setStatus(value)}><i />{STATUS_META[value].label}</button>)}</fieldset>
+      <fieldset className="status-picker"><legend>מה הסטטוס שלו?</legend>{(['available', 'low', 'missing'] as ItemStatus[]).map((value) => <button type="button" key={value} className={`${value} ${status === value ? 'selected' : ''}`} onClick={() => { setStatus(value); if(value === 'available') setUrgent(false) }}><i />{STATUS_META[value].label}</button>)}</fieldset>
+      {status !== 'available' && <label className="urgent-option"><input type="checkbox" checked={urgent} onChange={event => setUrgent(event.target.checked)} /><span><strong>דחוף</strong><small>יופיע בראש רשימת הקניות</small></span><CircleAlert size={19} /></label>}
       <div className="quantity-section"><div className="section-label"><span>כמות נוכחית</span><small>לא חובה</small></div><div className="quantity-controls"><button type="button" onClick={() => setQuantity(String(Math.max(0, Number(quantity || 0) - 1)))}><Minus size={18} /></button><input type="number" min="0" step="0.5" value={quantity} onChange={(event) => setQuantity(event.target.value)} placeholder="—" /><button type="button" onClick={() => setQuantity(String(Number(quantity || 0) + 1))}><Plus size={18} /></button><select value={unit} onChange={(event) => setUnit(event.target.value)}>{unitOptions.map((value) => <option key={value}>{value}</option>)}</select></div></div>
       <label className="form-field"><span>הערה <small>לא חובה</small></span><input value={note} onChange={(event) => setNote(event.target.value)} placeholder="לדוגמה: חלב 3%" /></label>
       {quantity === '0' && status !== 'missing' && <button type="button" className="zero-hint" onClick={() => setStatus('missing')}><CircleAlert size={17} />הכמות היא 0 — לשנות את הסטטוס לחסר?</button>}

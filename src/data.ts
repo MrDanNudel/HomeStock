@@ -5,6 +5,7 @@ export const categories: Category[] = [
   { id: 'hygiene', name: 'מוצרי היגיינה', icon: 'sparkles' },
   { id: 'laundry', name: 'מוצרי כביסה', icon: 'shirt' },
   { id: 'cleaning', name: 'מוצרי ניקוי', icon: 'spray-can' },
+  { id: 'household', name: 'ציוד לבית', icon: 'package' },
 ]
 
 const now = new Date().toISOString()

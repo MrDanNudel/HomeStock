@@ -6,6 +6,7 @@ export type HouseholdItem = {
   categoryId: string
   name: string
   status: ItemStatus
+  urgent?: boolean
   quantity?: number
   unit?: string
   note?: string

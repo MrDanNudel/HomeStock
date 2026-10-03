@@ -11,7 +11,7 @@ export function loadSavedItems(): HouseholdItem[] {
     if (!Array.isArray(items)) return []
     return items.filter((item): item is HouseholdItem => item !== null && typeof item === 'object'
       && typeof item.id === 'string' && typeof item.name === 'string'
-      && ['groceries', 'hygiene', 'laundry', 'cleaning'].includes(item.categoryId)
+      && ['groceries', 'hygiene', 'laundry', 'cleaning', 'household'].includes(item.categoryId)
       && ['available', 'low', 'missing'].includes(item.status))
   } catch {
     return []

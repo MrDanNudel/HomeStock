@@ -57,3 +57,12 @@ test('non-JSON upstream error and expired requests show a useful message',async(
  globalThis.fetch=async()=>{throw new DOMException('timeout','TimeoutError')};res=response();await auth(req,res);assert.equal(res.statusCode,504);assert.equal(res.data.code,'AUTH_TIMEOUT');
  }finally{globalThis.fetch=original}
 });
+
+test('household equipment is supported and urgency applies only to low or missing products',()=>{
+ const item={id:'battery',categoryId:'household',name:'סוללות',status:'missing',urgent:true};
+ assert.equal(validateItem(item).urgent,true);
+ assert.equal(validateItem({...item,status:'low'}).urgent,true);
+ assert.equal(validateItem({...item,status:'available'}).urgent,false);
+ assert.equal(validateItem({...item,urgent:undefined}).urgent,false);
+ assert.throws(()=>validateItem({...item,urgent:'true'}));
+});
