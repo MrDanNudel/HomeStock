@@ -58,12 +58,12 @@ export function CloudGate({ children }: { children: (person: Person, logout: () 
     {error && <p role="alert" className="cloud-error">{error}</p>}
   </form></main>
 }
-export function HouseholdSetup({ onReady }: { onReady: (invite?: string) => void }) {
+export function HouseholdSetup({ onReady }: { onReady: () => void }) {
   const [join, setJoin] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState('')
   const [savedItems] = useState(loadSavedItems)
   return <main className="auth-shell"><form className="auth-card" onSubmit={async e => {
     e.preventDefault(); setBusy(true); setError(''); const form = new FormData(e.currentTarget)
-    try { const data = await request('stock', join ? { action: 'join', code: form.get('code') } : { action: 'create', name: form.get('name'), items: form.get('import') ? savedItems : [] }); onReady(data.inviteCode) }
+    try { await request('stock', join ? { action: 'join', code: form.get('code') } : { action: 'create', name: form.get('name'), items: form.get('import') ? savedItems : [] }); onReady() }
     catch(e) { setError((e as Error).message) } finally { setBusy(false) }
   }}><h1>{join ? 'מצטרפים לבית' : 'הבית המשותף שלנו'}</h1>
     {join ? <label className="form-field"><span>קוד ההזמנה שקיבלת</span><input name="code" required dir="ltr" autoComplete="off" /></label> : <>

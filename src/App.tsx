@@ -3,6 +3,7 @@ import {
   Check,
   ChevronDown,
   CircleAlert,
+  CupSoda,
   House,
   Minus,
   PackageCheck,
@@ -26,6 +27,7 @@ const unitOptions = ['יחידות', 'בקבוקים', 'חבילות', 'ק״ג',
 
 const iconForCategory = (category: Category) => {
   const props = { size: 20, strokeWidth: 1.9 }
+  if (category.icon === 'cup-soda') return <CupSoda {...props} />
   if (category.icon === 'package') return <Package {...props} />
   if (category.icon === 'sparkles') return <Sparkles {...props} />
   if (category.icon === 'shirt') return <Shirt {...props} />
@@ -39,6 +41,8 @@ function App() {
 function StockApp({ person, logout }: { person: Person; logout: () => void }) {
   const { items, household, error, busy, syncing, refresh, mutate } = useStock()
   const [invite, setInvite] = useState('')
+  const [inviteOpen, setInviteOpen] = useState(false)
+  const [inviteLoading, setInviteLoading] = useState(false)
   const [shoppingMode, setShoppingMode] = useState(false)
   const [editingItem, setEditingItem] = useState<HouseholdItem | null>(null)
   const [newItemCategory, setNewItemCategory] = useState<string | null>(null)
@@ -68,7 +72,7 @@ function StockApp({ person, logout }: { person: Person; logout: () => void }) {
     if(await mutate({ action: 'update', item: { ...item, status: 'available', urgent: false } })) setToast(`${item.name} סומן כקיים`)
   }
   if (household === undefined) return <main className="auth-shell"><div className="auth-card"><p>{error || 'טוענים את המלאי…'}</p><button className="secondary-button" onClick={refresh}>ניסיון נוסף</button><button className="secondary-button" onClick={logout}>יציאה</button></div></main>
-  if (household === null) return <><HouseholdSetup onReady={code => { setInvite(code || ''); void refresh() }} /><button className="setup-logout secondary-button" onClick={logout}>יציאה מהחשבון</button></>
+  if (household === null) return <><HouseholdSetup onReady={() => { void refresh() }} /><button className="setup-logout secondary-button" onClick={logout}>יציאה מהחשבון</button></>
 
   return (
     <main className="app-shell">
@@ -81,7 +85,7 @@ function StockApp({ person, logout }: { person: Person; logout: () => void }) {
           </div>
         </div>
         <div className="header-actions">
-          <button className="secondary-button" disabled={busy} onClick={async () => { try { const data = await request('stock', { action: 'invite' }); setInvite(data.inviteCode) } catch(e) { setToast((e as Error).message) } }}>הזמנה לבית</button>
+          <button className="secondary-button" disabled={busy || inviteLoading} onClick={async () => { setInviteOpen(true); setInviteLoading(true); try { const data = await request('stock', { action: 'invite' }); setInvite(data.inviteCode) } catch(e) { setToast((e as Error).message) } finally { setInviteLoading(false) } }}>{inviteLoading ? 'יוצר קוד…' : 'הזמנה לבית'}</button>
           <button className="secondary-button" onClick={logout}>יציאה</button>
           <span className={`sync-pill ${!error && !syncing ? 'online' : ''}`}>
             <span className="sync-dot" />
@@ -96,7 +100,7 @@ function StockApp({ person, logout }: { person: Person; logout: () => void }) {
       </header>
 
       {error && <div className="cloud-error" role="alert">{error}</div>}
-      {invite && <section className="invite-panel"><strong>קוד הזמנה לבית</strong><p>בת הזוג נרשמת באתר ובוחרת ״יש לי קוד הזמנה״. יצירת קוד חדש מבטלת את הקודם.</p><code dir="ltr">{invite}</code><button className="secondary-button" onClick={async () => { try { await navigator.clipboard.writeText(invite); setToast('הקוד הועתק') } catch { setToast('אפשר לסמן ולהעתיק את הקוד') } }}>העתקה</button><button className="secondary-button" onClick={() => setInvite('')}>סגירה</button></section>}
+      {inviteOpen && invite && <section className="invite-panel"><strong>קוד הזמנה לבית</strong><p>בת הזוג נרשמת באתר ובוחרת ״יש לי קוד הזמנה״. יצירת קוד חדש מבטלת את הקודם.</p><code dir="ltr">{invite}</code><button className="secondary-button" onClick={async () => { try { await navigator.clipboard.writeText(invite); setToast('הקוד הועתק') } catch { setToast('אפשר לסמן ולהעתיק את הקוד') } }}>העתקה</button><button className="secondary-button" onClick={() => { setInviteOpen(false); setInvite('') }}>סגירה</button></section>}
       <div className={busy ? 'stock-content saving' : 'stock-content'} aria-busy={busy}>
       <section className="summary-strip" aria-label="סיכום מלאי">
         <div><span className="summary-dot missing" /><strong>{missingCount}</strong><small>חסרים</small></div>
@@ -245,11 +249,11 @@ function ItemDialog({ item, categoryId, onClose, onSave, onDelete }: { item: Hou
   return <div className="dialog-backdrop" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
     <form className="dialog" onSubmit={submit}>
       <div className="dialog-heading"><div><span className="eyebrow">{category?.name}</span><h2>{item ? `עריכת ${item.name}` : 'הוספת מוצר חדש'}</h2></div><button type="button" className="icon-button" onClick={onClose}><X size={20} /></button></div>
-      <label className="form-field"><span>שם המוצר</span><input autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder="לדוגמה: חלב" /></label>
+      <label className="form-field"><span>שם המוצר</span><input autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder={`לדוגמה: ${category?.exampleName ?? 'מוצר לבית'}`} /></label>
       <fieldset className="status-picker"><legend>מה הסטטוס שלו?</legend>{(['available', 'low', 'missing'] as ItemStatus[]).map((value) => <button type="button" key={value} className={`${value} ${status === value ? 'selected' : ''}`} onClick={() => { setStatus(value); if(value === 'available') setUrgent(false) }}><i />{STATUS_META[value].label}</button>)}</fieldset>
       {status !== 'available' && <label className="urgent-option"><input type="checkbox" checked={urgent} onChange={event => setUrgent(event.target.checked)} /><span><strong>דחוף</strong><small>יופיע בראש רשימת הקניות</small></span><CircleAlert size={19} /></label>}
       <div className="quantity-section"><div className="section-label"><span>כמות נוכחית</span><small>לא חובה</small></div><div className="quantity-controls"><button type="button" onClick={() => setQuantity(String(Math.max(0, Number(quantity || 0) - 1)))}><Minus size={18} /></button><input type="number" min="0" step="0.5" value={quantity} onChange={(event) => setQuantity(event.target.value)} placeholder="—" /><button type="button" onClick={() => setQuantity(String(Number(quantity || 0) + 1))}><Plus size={18} /></button><select value={unit} onChange={(event) => setUnit(event.target.value)}>{unitOptions.map((value) => <option key={value}>{value}</option>)}</select></div></div>
-      <label className="form-field"><span>הערה <small>לא חובה</small></span><input value={note} onChange={(event) => setNote(event.target.value)} placeholder="לדוגמה: חלב 3%" /></label>
+      <label className="form-field"><span>הערה <small>לא חובה</small></span><input value={note} onChange={(event) => setNote(event.target.value)} placeholder={`לדוגמה: ${category?.exampleNote ?? 'מותג מועדף'}`} /></label>
       {quantity === '0' && status !== 'missing' && <button type="button" className="zero-hint" onClick={() => setStatus('missing')}><CircleAlert size={17} />הכמות היא 0 — לשנות את הסטטוס לחסר?</button>}
       <div className="dialog-footer">{onDelete && <button type="button" className="delete-button" onClick={onDelete}><Trash2 size={17} />מחיקה</button>}<span /><button type="button" className="secondary-button" onClick={onClose}>ביטול</button><button className="primary-button" disabled={!name.trim()}>{item ? 'שמירת שינויים' : 'הוספת מוצר'}</button></div>
     </form>

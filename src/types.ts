@@ -18,6 +18,8 @@ export type Category = {
   id: string
   name: string
   icon: string
+  exampleName: string
+  exampleNote: string
 }
 
 export type SortMode = 'alphabetical' | 'status'
