@@ -148,7 +148,7 @@ function StockApp({ person, logout }: { person: Person; logout: () => void }) {
 function CategoryCard({ category, items, onEdit, onAdd }: { category: Category; items: HouseholdItem[]; onEdit: (item: HouseholdItem) => void; onAdd: () => void }) {
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<'all' | 'urgent' | ItemStatus>('all')
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(true)
 
   const visibleItems = useMemo(() => items
     .filter((item) => item.name.includes(query.trim()))
@@ -156,14 +156,22 @@ function CategoryCard({ category, items, onEdit, onAdd }: { category: Category; 
     .sort((a, b) => a.name.localeCompare(b.name, 'he')),
   [items, query, filter])
 
-  const alerts = items.filter((item) => item.status !== 'available').length
+  const missing = items.filter(item => item.status === 'missing').length
+  const low = items.filter(item => item.status === 'low').length
+  const urgent = items.filter(item => item.urgent && item.status !== 'available').length
 
   return (
     <article className={`category-card ${collapsed ? 'mobile-collapsed' : ''}`} data-category={category.id}>
       <div className="card-heading">
         <div className="category-title">
           <span className="category-icon">{iconForCategory(category)}</span>
-          <div><h2>{category.name}</h2><p>{items.length} מוצרים{alerts ? ` · ${alerts} דורשים תשומת לב` : ''}</p></div>
+          <div><h2>{category.name}</h2><p>{items.length} מוצרים</p>
+            {(missing > 0 || low > 0 || urgent > 0) && <div className="category-alerts">
+              {missing > 0 && <span className="category-alert missing">{missing} חסרים</span>}
+              {low > 0 && <span className="category-alert low">{low} עומדים להיגמר</span>}
+              {urgent > 0 && <span className="category-alert urgent"><CircleAlert size={12} />{urgent} דחופים</span>}
+            </div>}
+          </div>
         </div>
         <button type="button" className="card-toggle" aria-expanded={!collapsed} aria-controls={`category-content-${category.id}`} aria-label={`${collapsed ? 'פתיחת' : 'סגירת'} ${category.name}`} onClick={() => setCollapsed(value => !value)}><ChevronDown size={18} /></button>
         <button className="add-button" onClick={() => { setCollapsed(false); onAdd() }} aria-label={`הוספת מוצר אל ${category.name}`}><Plus size={20} /></button>
