@@ -280,7 +280,7 @@ function ItemDialog({ item, categoryId, onClose, onSave, onDelete, saving, error
       <div className="quantity-section"><div className="section-label"><span>כמות נוכחית</span><small>לא חובה</small></div><div className="quantity-controls"><button type="button" onClick={() => setQuantity(String(Math.max(0, Number(quantity || 0) - 1)))}><Minus size={18} /></button><input type="number" min="0" step="0.5" value={quantity} onChange={(event) => setQuantity(event.target.value)} placeholder="—" /><button type="button" onClick={() => setQuantity(String(Number(quantity || 0) + 1))}><Plus size={18} /></button><select value={unit} onChange={(event) => setUnit(event.target.value)}>{unitOptions.map((value) => <option key={value}>{value}</option>)}</select></div></div>
       <label className="form-field"><span>הערה <small>לא חובה</small></span><input value={note} onChange={(event) => setNote(event.target.value)} placeholder={`לדוגמה: ${category?.exampleNote ?? 'מותג מועדף'}`} /></label>
       {quantity === '0' && status !== 'missing' && <button type="button" className="zero-hint" onClick={() => setStatus('missing')}><CircleAlert size={17} />הכמות היא 0 — לשנות את הסטטוס לחסר?</button>}
-      {saving && <p className="save-feedback" role="status">{item ? 'שומרים את השינויים בענן…' : 'מוסיפים את המוצר לבית המשותף…'}</p>}
+      {saving && <p className="save-feedback" role="status"><span className="loading-spinner" aria-hidden="true" />{item ? 'שומרים את השינויים בענן…' : 'מוסיפים את המוצר לבית המשותף…'}</p>}
       {!saving && error && <p className="cloud-error" role="alert">{error}</p>}
       <div className="dialog-footer">{onDelete && <button type="button" className="delete-button" onClick={onDelete}><Trash2 size={17} />מחיקה</button>}<span /><button type="button" className="secondary-button" onClick={onClose}>ביטול</button><button className="primary-button save-product-button" disabled={saving || !name.trim()}>{saving ? <><span className="loading-spinner" />{item ? 'שומרים שינויים…' : 'מוסיפים מוצר…'}</> : item ? 'שמירת שינויים' : 'הוספת מוצר'}</button></div>
       </fieldset>
@@ -331,6 +331,7 @@ function DeleteConfirmation({ item, busy, error, onConfirm, onCancel }: { item: 
       <h2 id="delete-title">מחיקת פריט</h2>
       <p id="delete-description">האם אתה בטוח שברצונך למחוק את ״{item.name}״?</p>
       {!busy && error && <p className="cloud-error" role="alert">{error}</p>}
+      {busy && <p className="save-feedback delete-feedback" role="status"><span className="loading-spinner" aria-hidden="true" />מוחקים את הפריט מהמלאי…</p>}
       <div className="delete-actions"><button className="delete-button" disabled={busy} onClick={onConfirm}>{busy ? <><span className="loading-spinner" />מוחקים…</> : 'כן, מחק פריט'}</button><button ref={cancelButton} className="secondary-button" disabled={busy} onClick={onCancel}>ביטול</button></div>
     </section>
   </div>

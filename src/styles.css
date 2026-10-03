@@ -236,3 +236,6 @@ button:focus-visible { outline: 3px solid #b8a9e0; outline-offset: 3px; }
 @media(prefers-reduced-motion:reduce) { .loading-spinner { animation-duration: 2s; } .swipe-row { transition: none; } }
 
 .dialog-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
+
+.save-feedback { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 14px; border-radius: 12px; background: var(--purple-soft); line-height: 1.6; }
+.delete-feedback { background: var(--red-bg); color: var(--red); }
