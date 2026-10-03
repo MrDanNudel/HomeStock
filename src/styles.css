@@ -23,7 +23,8 @@
 html { -webkit-text-size-adjust: 100%; }
 body { margin: 0; min-width: 320px; min-height: 100vh; background: radial-gradient(circle at 85% -20%, #e8e1f7 0, transparent 34rem), #f6f5fa; -webkit-tap-highlight-color: transparent; }
 button, input, select { font: inherit; }
-button { cursor: pointer; }
+button { cursor: pointer; touch-action: manipulation; transition: background-color .18s ease, border-color .18s ease, box-shadow .18s ease; }
+button:focus-visible { outline: 3px solid #b8a9e0; outline-offset: 3px; }
 
 .app-shell { max-width: 1380px; margin: 0 auto; padding: 28px 34px 60px; }
 .topbar { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 22px; }
@@ -135,3 +136,30 @@ button { cursor: pointer; }
 .stock-content.saving { pointer-events:none; opacity:.65; }
 .setup-logout { position:fixed; bottom:20px; left:20px; }
 @media(max-width:600px) { .header-actions { flex-wrap:wrap; } .auth-card { padding:22px; } }
+
+.primary-button, .secondary-button, .shopping-button, .delete-button, .sort-button {
+  min-height: 48px;
+  height: auto;
+  padding: 11px 18px;
+  border-radius: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.primary-button { box-shadow: 0 4px 12px rgba(57,46,103,.14); }
+.primary-button:hover:not(:disabled) { background: var(--purple-dark); box-shadow: 0 6px 16px rgba(57,46,103,.2); }
+.secondary-button:hover:not(:disabled), .sort-button:hover:not(:disabled) { background: var(--purple-soft); border-color: #cfc5e5; }
+.auth-card .primary-button, .auth-card .secondary-button { width: 100%; min-height: 52px; border-radius: 16px; font-size: .96rem; }
+.auth-card .form-field { margin-bottom: 0; }
+.auth-card .form-field input { height: 50px; border-radius: 13px; }
+.add-button, .icon-button { width: 44px; height: 44px; border-radius: 13px; flex-shrink: 0; }
+.purchase-check { width: 40px; height: 40px; }
+.status-picker button { min-height: 48px; height: auto; border-radius: 13px; }
+.quantity-controls button { min-height: 46px; border-radius: 12px; }
+.dialog-footer button { min-height: 48px; height: auto; border-radius: 14px; }
+.invite-panel .secondary-button { margin-inline-end: 8px; }
+@media(max-width:600px) {
+  .topbar { flex-wrap: wrap; gap: 16px; }
+  .header-actions { width: 100%; gap: 8px; }
+  .header-actions .secondary-button, .shopping-button { padding-inline: 13px; }
+}
+@media(prefers-reduced-motion:reduce) { button { transition: none; } }
