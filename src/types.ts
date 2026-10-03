@@ -22,8 +22,6 @@ export type Category = {
   exampleNote: string
 }
 
-export type SortMode = 'alphabetical' | 'status'
-
 export const STATUS_META: Record<ItemStatus, { label: string; shortLabel: string }> = {
   available: { label: 'קיים', shortLabel: 'קיים' },
   low: { label: 'עומד להיגמר', shortLabel: 'כמעט נגמר' },

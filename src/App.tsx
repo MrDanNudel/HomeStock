@@ -20,9 +20,8 @@ import {
 } from 'lucide-react'
 import { categories } from './data'
 import { CloudGate, HouseholdSetup, request, useStock, type Person } from './Cloud'
-import { STATUS_META, type Category, type HouseholdItem, type ItemStatus, type SortMode } from './types'
+import { STATUS_META, type Category, type HouseholdItem, type ItemStatus } from './types'
 
-const statusOrder: Record<ItemStatus, number> = { missing: 0, low: 1, available: 2 }
 const unitOptions = ['יחידות', 'בקבוקים', 'חבילות', 'ק״ג', 'ליטר', 'גלילים', 'אחר']
 
 const iconForCategory = (category: Category) => {
@@ -143,15 +142,12 @@ function StockApp({ person, logout }: { person: Person; logout: () => void }) {
 function CategoryCard({ category, items, onEdit, onAdd }: { category: Category; items: HouseholdItem[]; onEdit: (item: HouseholdItem) => void; onAdd: () => void }) {
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<'all' | ItemStatus>('all')
-  const [sort, setSort] = useState<SortMode>('alphabetical')
 
   const visibleItems = useMemo(() => items
     .filter((item) => item.name.includes(query.trim()))
     .filter((item) => filter === 'all' || item.status === filter)
-    .sort((a, b) => Number(Boolean(b.urgent && b.status !== 'available')) - Number(Boolean(a.urgent && a.status !== 'available')) || (sort === 'alphabetical'
-      ? a.name.localeCompare(b.name, 'he')
-      : statusOrder[a.status] - statusOrder[b.status] || a.name.localeCompare(b.name, 'he'))),
-  [items, query, filter, sort])
+    .sort((a, b) => a.name.localeCompare(b.name, 'he')),
+  [items, query, filter])
 
   const alerts = items.filter((item) => item.status !== 'available').length
 
@@ -170,7 +166,6 @@ function CategoryCard({ category, items, onEdit, onAdd }: { category: Category; 
         <div className="select-wrap"><select value={filter} onChange={(event) => setFilter(event.target.value as typeof filter)} aria-label="סינון לפי סטטוס">
           <option value="all">כל הסטטוסים</option><option value="missing">חסר</option><option value="low">עומד להיגמר</option><option value="available">קיים</option>
         </select><ChevronDown size={15} /></div>
-        <button className="sort-button" onClick={() => setSort((value) => value === 'alphabetical' ? 'status' : 'alphabetical')}>{sort === 'alphabetical' ? 'א׳–ב׳' : 'לפי סטטוס'}</button>
       </div>
 
       <div className="item-list">
@@ -193,7 +188,7 @@ function ItemRow({ item, onEdit }: { item: HouseholdItem; onEdit: () => void }) 
 }
 
 function ShoppingView({ items, onEdit, onPurchased }: { items: HouseholdItem[]; onEdit: (item: HouseholdItem) => void; onPurchased: (item: HouseholdItem) => void }) {
-  const shoppingItems = items.filter((item) => item.status !== 'available').sort((a, b) => statusOrder[a.status] - statusOrder[b.status])
+  const shoppingItems = items.filter((item) => item.status !== 'available').sort((a, b) => a.name.localeCompare(b.name, 'he'))
   return (
     <section className="shopping-panel">
       <div className="shopping-heading">
