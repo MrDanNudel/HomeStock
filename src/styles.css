@@ -182,7 +182,8 @@ button:focus-visible { outline: 3px solid #b8a9e0; outline-offset: 3px; }
   .category-card[data-category="groceries"] { grid-area: 1 / 1; }
   .category-card[data-category="meat-fish"] { grid-area: 2 / 1; }
   .category-card[data-category="produce"] { grid-area: 3 / 1; }
-  .category-card[data-category="snacks"] { grid-area: 4 / 1; }
+  .category-card[data-category="sauces-spices"] { grid-area: 4 / 1; }
+  .category-card[data-category="snacks"] { grid-area: 5 / 1; }
   .category-card[data-category="hygiene"] { grid-area: 1 / 2; }
   .category-card[data-category="laundry"] { grid-area: 2 / 2; }
   .category-card[data-category="cleaning"] { grid-area: 3 / 2; }

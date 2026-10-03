@@ -4,6 +4,7 @@ export const categories: Category[] = [
   { id: 'groceries', name: 'מצרכים', icon: 'shopping-basket', exampleName: 'חלב', exampleNote: 'חלב 3%' },
   { id: 'meat-fish', name: 'בשר ודגים', icon: 'fish', exampleName: 'חזה עוף', exampleNote: 'טרי, חתוך לקוביות' },
   { id: 'produce', name: 'פירות וירקות', icon: 'carrot', exampleName: 'עגבניות', exampleNote: 'עגבניות שרי' },
+  { id: 'sauces-spices', name: 'רטבים ותבלינים', icon: 'cooking-pot', exampleName: 'קטשופ', exampleNote: 'ללא תוספת סוכר' },
   { id: 'snacks', name: 'שוקולד, חטיפים ושתייה', icon: 'cup-soda', exampleName: 'שוקולד', exampleNote: 'שוקולד מריר 70%' },
   { id: 'hygiene', name: 'מוצרי טיפוח והיגיינה', icon: 'sparkles', exampleName: 'שמפו', exampleNote: 'לעור רגיש' },
   { id: 'laundry', name: 'מוצרי כביסה', icon: 'shirt', exampleName: 'מרכך כביסה', exampleNote: 'לכביסה צבעונית' },

@@ -71,5 +71,5 @@ test('household equipment is supported and urgency applies only to low or missin
 
 test('food category changes retain product identity, quantity and urgency',()=>{
  const item={id:'food-1',categoryId:'groceries',name:'עוף',status:'low',urgent:true,quantity:2,unit:'ק״ג',note:'טרי'};
- for(const categoryId of ['meat-fish','produce']) {const moved=validateItem({...item,categoryId});assert.equal(moved.categoryId,categoryId);assert.equal(moved.id,item.id);assert.equal(moved.quantity,2);assert.equal(moved.urgent,true);assert.equal(moved.note,'טרי')}
+ for(const categoryId of ['meat-fish','produce','sauces-spices']) {const moved=validateItem({...item,categoryId});assert.equal(moved.categoryId,categoryId);assert.equal(moved.id,item.id);assert.equal(moved.quantity,2);assert.equal(moved.urgent,true);assert.equal(moved.note,'טרי')}
 });

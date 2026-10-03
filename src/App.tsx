@@ -6,6 +6,7 @@ import {
   Carrot,
   CircleAlert,
   CupSoda,
+  CookingPot,
   House,
   Minus,
   PackageCheck,
@@ -29,6 +30,7 @@ const unitOptions = ['יחידות', 'בקבוקים', 'חבילות', 'ק״ג',
 
 const iconForCategory = (category: Category) => {
   const props = { size: 20, strokeWidth: 1.9 }
+  if (category.icon === 'cooking-pot') return <CookingPot {...props} />
   if (category.icon === 'fish') return <Fish {...props} />
   if (category.icon === 'carrot') return <Carrot {...props} />
   if (category.icon === 'utensils') return <Utensils {...props} />
